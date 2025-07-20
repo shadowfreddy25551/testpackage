@@ -14,7 +14,6 @@ ver_lt() {
 
 check_newer() {
   pacman -Sy --noconfirm >/dev/null 2>&1
-  yay -Sy --noconfirm >/dev/null 2>&1
 
   INST_VER=$(pacman -Q $PKG 2>/dev/null | awk '{print $2}')
   if [[ -z "$INST_VER" ]]; then
@@ -23,7 +22,7 @@ check_newer() {
   fi
 
   REPO_VER=$(pacman -Si $PKG 2>/dev/null | awk '/Version/ {print $3}')
-  AUR_VER=$(yay -Si $PKG 2>/dev/null | awk '/Version/ {print $3}')
+  AUR_VER=$(curl -s "https://aur.archlinux.org/rpc/?v=5&type=info&arg=$PKG" | jq -r '.results.Version')
 
   if ver_lt "$INST_VER" "$REPO_VER"; then
     echo "Newer version $REPO_VER available in repo."
@@ -44,8 +43,8 @@ if ! check_newer; then
   exit 1
 fi
 
-pacman -Syu --noconfirm
 flatpak update -y
+pacman -Syu --noconfirm
 yay -Syu --noconfirm
 
 echo "Checking for newer version after update..."
