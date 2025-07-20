@@ -8,6 +8,7 @@ fi
 PKG="updaterv2"
 
 ver_lt() {
+  # Returns 0 if $1 < $2, else 1
   [[ "$1" == "$2" ]] && return 1
   [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$2" ]]
 }
@@ -22,23 +23,27 @@ check_newer() {
   fi
 
   REPO_VER=$(pacman -Si $PKG 2>/dev/null | awk '/Version/ {print $3}')
-  AUR_VER=$(curl -s "https://aur.archlinux.org/rpc/?v=5&type=info&arg=$PKG" | jq -r '.results.Version')
+  AUR_VER=$(curl -s "https://aur.archlinux.org/rpc/?v=5&type=info&arg=$PKG&cache_bust=$(date +%s)" | jq -r '.results.Version')
+
+  echo "Installed version: $INST_VER"
+  echo "Repo version: $REPO_VER"
+  echo "AUR version: $AUR_VER"
 
   if ver_lt "$INST_VER" "$REPO_VER"; then
     echo "Newer version $REPO_VER available in repo."
-    return 1
+    return 0
   fi
 
   if ver_lt "$INST_VER" "$AUR_VER"; then
     echo "Newer version $AUR_VER available in AUR."
-    return 1
+    return 0
   fi
 
-  return 0
+  return 1  # No newer version available
 }
 
 echo "Checking for newer version before update..."
-if ! check_newer; then
+if check_newer; then
   echo "Update halted. Please update $PKG manually first."
   exit 1
 fi
@@ -48,7 +53,7 @@ pacman -Syu --noconfirm
 yay -Syu --noconfirm
 
 echo "Checking for newer version after update..."
-if ! check_newer; then
+if check_newer; then
   echo "Newer version detected after update. Please update $PKG manually."
   exit 1
 fi
