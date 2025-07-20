@@ -1,12 +1,7 @@
 #!/bin/bash
+set -e
 
 CONFIG_FILE="/etc/updater.conf"
-
-if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Config file not found at $CONFIG_FILE."
-  echo "Please run 'config.sh' to create it first."
-  exit 1
-fi
 
 if [[ $EUID -ne 0 ]]; then
   echo "Please run this as sudo."
@@ -21,16 +16,12 @@ fi
 
 echo "Running update commands from config..."
 
-while IFS= read -r cmd; do
+while IFS= read -r cmd || [[ -n "$cmd" ]]; do
   if [[ -z "$cmd" ]]; then
     continue
   fi
   echo "Running: $cmd"
   eval "$cmd"
-  if [[ $? -ne 0 ]]; then
-    echo "Command failed: $cmd"
-    exit 1
-  fi
 done < "$CONFIG_FILE"
 
 echo "Update complete. Rebooting in 10 seconds..."
